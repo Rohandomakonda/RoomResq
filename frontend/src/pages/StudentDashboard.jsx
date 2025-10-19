@@ -1,36 +1,73 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import axios from 'axios';
 import { ComplaintForm } from '../components/complaints/ComplaintForm';
 import { ComplaintCard } from '../components/complaints/ComplaintCard';
 import { Plus, Filter } from 'lucide-react';
 
 export function StudentDashboard() {
-  const { profile } = useAuth();
+  const [profile, setProfile] = useState(null);
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
 
+  // Fetch profile from localStorage
+  useEffect(() => {
+    const userId = localStorage.getItem('user_id');
+    const userName = localStorage.getItem('user_name');
+    const userEmail = localStorage.getItem('user_email');
+    if (userId && userName && userEmail) {
+      setProfile({ id: userId, name: userName, email: userEmail });
+    }
+  }, []);
+
+  // Fetch complaints from backend
   const fetchComplaints = async () => {
     if (!profile) return;
-
     setLoading(true);
-    const { data, error } = await supabase
-      .from('complaints')
-      .select('*')
-      .eq('student_id', profile.id)
-      .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setComplaints(data);
+    const accessToken = localStorage.getItem('access_token');
+
+    try {
+      const response = await axios.get(
+        `http://localhost:8080/complaints/track/${profile.id}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      setComplaints(response.data);
+    } catch (err) {
+      console.error('Failed to fetch complaints:', err);
+      setComplaints([]);
     }
+
     setLoading(false);
   };
 
   useEffect(() => {
     fetchComplaints();
   }, [profile]);
+
+  const handleComplete = async (complaintId) => {
+    const confirmed = window.confirm('Are you sure the complaint is resolved?');
+    if (!confirmed) return;
+
+    const accessToken = localStorage.getItem('access_token');
+    try {
+      await axios.put(
+        `http://localhost:8080/complaints/update-status/${complaintId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      fetchComplaints(); // Refresh the list after marking as completed
+    } catch (err) {
+      console.error('Failed to update complaint status:', err);
+      alert('Failed to mark complaint as completed.');
+    }
+  };
 
   const filteredComplaints = complaints.filter((complaint) =>
     filterStatus === 'all' ? true : complaint.status === filterStatus
@@ -56,6 +93,7 @@ export function StudentDashboard() {
         </button>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-gray-400">
           <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
@@ -84,6 +122,7 @@ export function StudentDashboard() {
         />
       )}
 
+      {/* Filter */}
       <div className="bg-white rounded-lg shadow-md p-4">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-gray-600" />
@@ -100,6 +139,7 @@ export function StudentDashboard() {
           </select>
         </div>
 
+        {/* Complaints List */}
         {loading ? (
           <div className="text-center py-12">
             <p className="text-gray-600">Loading complaints...</p>
@@ -115,7 +155,17 @@ export function StudentDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredComplaints.map((complaint) => (
-              <ComplaintCard key={complaint.id} complaint={complaint} />
+              <div key={complaint.id}>
+                <ComplaintCard complaint={complaint} />
+                {complaint.status !== 'Resolved' && (
+                  <button
+                    onClick={() => handleComplete(complaint.id)}
+                    className="mt-2 w-full bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Mark as Completed
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}

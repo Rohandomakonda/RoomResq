@@ -166,60 +166,62 @@ public class AuthService {
     public AuthResponse authenticateWithGoogle(String token) {
         try {
             // Validate the Google ID token
-            System.out.println("received token is "+token);
-            System.out.println("hello ");
-            System.out.println("validate is "+googleTokenValidator.validateToken(token));
             var payload = googleTokenValidator.validateToken(token);
-            System.out.println("payload is "+payload);
-
             String email = payload.getEmail();
             String name = (String) payload.get("name");
 
-            System.out.println(email + " email to name " + name);
+            // Restrict to @student.nitw.ac.in only
+            if (!email.endsWith("@student.nitw.ac.in")) {
+                System.out.println("Unauthorized email domain: " + email);
+                return null; // or throw new RuntimeException("Only NITW student emails allowed");
+            }
+            System.out.println("Unauthorized email domain: " + email);
 
             // Check if user exists or create a new one
             Optional<User> user = repo.findByEmail(email);
-
-            System.out.println("is user present?? "+user.isPresent());
-
-            //if user is not present then create a new one
             Set<Role> roles = new HashSet<>();
             roles.add(Role.STUDENT);
             User user2;
-            if(!user.isPresent()){
 
+            if (!user.isPresent()) {
                 User newUser = new User();
                 newUser.setEmail(email);
                 newUser.setName(name);
                 newUser.setRoles(roles);
                 newUser.setVerified(true);
+                newUser.setPassword(UUID.randomUUID().toString());
+
                 repo.save(newUser);
-                user2=newUser;
-            }
-            else{
-                user2=user.get();
+                user2 = newUser;
+            } else {
+                user2 = user.get();
             }
 
-            System.out.println("user2 is "+user2.getEmail());
 
             UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                     user2.getEmail(),
-                    user2.getPassword() != null ? user2.getPassword() : "",
+                    user2.getPassword(),
                     user2.getRoles().stream().map(role -> new SimpleGrantedAuthority(role.name())).collect(Collectors.toList())
             );
-            System.out.println("userDetails is done ");
+
 
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities()
             );
 
-            System.out.println("authentication is set ");
-            // Step 4: Generate access and refresh tokens using JwtTokenProvider
+            // Generate JWT tokens
             String accessToken = tokenProvider.generateAccessToken(authentication);
             String refreshToken = tokenProvider.generateRefreshToken(user2.getEmail());
 
-            // Step 5: Return the AuthResponse
-            return new AuthResponse(accessToken, refreshToken, user2.getId(), user2.getEmail(),user2.getName(),user2.getRoles(), user2.getRoomno());
+            return new AuthResponse(
+                    accessToken,
+                    refreshToken,
+                    user2.getId(),
+                    user2.getEmail(),
+                    user2.getName(),
+                    user2.getRoles(),
+                    user2.getRoomno()
+            );
 
         } catch (Exception e) {
             System.out.println("Invalid Google token");
@@ -227,6 +229,7 @@ public class AuthService {
 
         return null;
     }
+
 
 
 

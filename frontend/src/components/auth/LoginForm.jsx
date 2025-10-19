@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import GoogleSignIn from "./GoogleLogin.jsx";
 export function LoginForm({ onToggle }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,9 +55,41 @@ export function LoginForm({ onToggle }) {
     setLoading(false);
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    alert('Google sign-in not implemented yet. Use normal login.');
+ 
+  const handleGoogleSuccess = async (response) => {
+    try {
+      setLoading(true);
+      const backendResponse = await axios.post(`http://localhost:8080/api/auth/google`, { token: response.credential });
+      const data = backendResponse.data;
+
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user_email', data.email);
+      localStorage.setItem('user_name', data.name);
+      localStorage.setItem('user_roles', JSON.stringify(data.roles));
+      localStorage.setItem('user_id', data.id);
+      if (data.roles.includes('STUDENT')) navigate('/dashboard');
+      else if (data.roles.includes('STAFF')) navigate('/staff');
+      else navigate('/dashboard');
+
+      setSnackbarOpen(true);
+      setError(false);
+      setMessage("Login successful");
+      
+    } catch (error) {
+      console.error("Google login failed:", error);
+      setSnackbarOpen(true);
+      setError(true);
+      setMessage("Google login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setSnackbarOpen(true);
+    setError(true);
+    setMessage("Google login failed");
   };
 
   return (
@@ -128,12 +160,10 @@ export function LoginForm({ onToggle }) {
             </div>
           </div>
 
-          <button
-            onClick={handleGoogleSignIn}
-            className="mt-4 w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            Google Sign In
-          </button>
+          <GoogleSignIn
+                  handleGoogleSuccess={handleGoogleSuccess}
+                  handleGoogleError={handleGoogleError}
+                />
         </div>
 
         <p className="mt-6 text-center text-sm text-gray-600">

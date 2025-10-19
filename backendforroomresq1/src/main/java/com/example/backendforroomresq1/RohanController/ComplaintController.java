@@ -9,47 +9,58 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
 @RestController
 @RequestMapping("/complaints")
 public class ComplaintController {
 
     @Autowired
     private ComplaintRepository complaintRepository;
-    @Autowired
-    private UserRepository userRepo;
 
     // Submit Complaint
     @PostMapping("/submit")
     public Complaint submitComplaint(@RequestBody Complaint complaint) {
-        complaint.setStatus("Pending");
+        complaint.setStatus("Submitted");
         complaint.setCreatedAt(LocalDateTime.now());
         complaint.setUpdatedAt(LocalDateTime.now());
         return complaintRepository.save(complaint);
     }
 
-    // Track Complaints
+    // Track Complaints for a Student
     @GetMapping("/track/{studentId}")
     public List<Complaint> trackComplaints(@PathVariable Long studentId) {
         return complaintRepository.findByStudentId(studentId);
     }
 
+
     // Update Complaint Status (for staff)
     @PutMapping("/update-status/{complaintId}")
-    public Complaint updateStatus(@PathVariable Long complaintId, @RequestParam String status) {
+    public Complaint updateStatus(
+            @PathVariable Long complaintId
+    ) {
         Complaint complaint = complaintRepository.findById(complaintId).orElseThrow();
-        complaint.setStatus(status);
+        complaint.setStatus("Resolved");
         complaint.setUpdatedAt(LocalDateTime.now());
         return complaintRepository.save(complaint);
     }
 
-    // Assign Staff
+    // Assign Staff to Complaint
     @PutMapping("/assign-staff/{complaintId}")
-    public Complaint assignStaff(@PathVariable Long complaintId, @RequestParam Long staffId) {
+    public Complaint assignStaff(
+            @PathVariable Long complaintId,
+            @RequestParam Long staffId
+    ) {
         Complaint complaint = complaintRepository.findById(complaintId).orElseThrow();
-        User staff = userRepo.findById(staffId).orElseThrow();
-        complaint.setAssignedStaff(staff);
+        complaint.setStaffId(staffId);
+        complaint.setStatus("In Progress");
         complaint.setUpdatedAt(LocalDateTime.now());
         return complaintRepository.save(complaint);
+    }
+    @GetMapping("/all-unassigned")
+    public List<Complaint> getAllUnassignedComplaints() {
+        return complaintRepository.findByStaffIdIsNull();
+    }
+    @GetMapping("/getassigned/{staffId}")
+    public List<Complaint> getAssignedComplaints(@PathVariable Long staffId) {
+        return complaintRepository.findByStaffIdAndStatusIn(staffId, List.of("Resolved", "In Progress"));
     }
 }

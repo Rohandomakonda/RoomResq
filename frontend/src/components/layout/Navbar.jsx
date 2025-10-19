@@ -6,11 +6,9 @@ import { useNavigate } from 'react-router-dom';
 export function Navbar() {
   const navigate = useNavigate();
   const profile = {
-    full_name: 'Rohan Domakonda',
-    email: 'rohan@example.com',
-    role: 'student', // change to 'staff' to test staff UI
-    room_number: 'A-101',
-    phone: '+911234567890',
+    full_name: localStorage.getItem('user_name'),
+    email: localStorage.getItem('user_email'),
+    role: localStorage.getItem('user_role'), // change to 'staff' to test staff UI
   };
   const location = useLocation();
 

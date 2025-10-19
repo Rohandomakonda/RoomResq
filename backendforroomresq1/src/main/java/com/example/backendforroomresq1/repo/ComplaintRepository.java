@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     List<Complaint> findByStudentId(Long studentId);
+    List<Complaint> findByStaffIdIsNull();
+    List<Complaint> findByStaffIdAndStatusIn(Long staffId, List<String> statusList);
+
+    List<Complaint> findByStudentIdAndStatusIn(Long studentId, List<String> statuses);
 }
