@@ -5,10 +5,14 @@ import { Shield, LogOut, User, Home, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 export function Navbar() {
   const navigate = useNavigate();
+  const storedRoles = localStorage.getItem('user_roles');
+  const role = storedRoles ? JSON.parse(storedRoles) : [];
+  
+  
   const profile = {
     full_name: localStorage.getItem('user_name'),
     email: localStorage.getItem('user_email'),
-    role: localStorage.getItem('user_role'), // change to 'staff' to test staff UI
+    role,
   };
   const location = useLocation();
 
@@ -35,7 +39,7 @@ export function Navbar() {
           {profile && (
             <div className="flex items-center gap-4">
               <Link
-                to={profile.role === 'student' ? '/dashboard' : '/staff'}
+                to={profile.role.includes('STUDENT') ? '/dashboard' : '/staff'}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
                   isActive(profile.role === 'student' ? '/dashboard' : '/staff')
                     ? 'bg-blue-50 text-blue-700'

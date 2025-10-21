@@ -22,6 +22,7 @@ export function LoginForm({ onToggle }) {
       });
 
       const data = res.data;
+      console.log(data);
 
       // Save tokens and user info in localStorage
       localStorage.setItem('access_token', data.access_token);
