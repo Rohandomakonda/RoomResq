@@ -14,7 +14,8 @@ export function Navbar() {
     email: localStorage.getItem('user_email'),
     role,
   };
-  const location = useLocation();
+  const location = useLocation();  
+  
 
   const isActive = (path) => location.pathname === path;
   const handleLogout = () => {
